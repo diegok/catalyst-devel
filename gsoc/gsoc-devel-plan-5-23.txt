@@ -90,21 +90,18 @@
 16:03 <t0m> and the ones which can't get deprecated, but preserved.
 16:04 <dhoss> so that's just for the current get_file, right? 
 16:04 <t0m> yy
-########################################################################
-## done
-16:04 <t0m>     $self->copy_share_file(                                 
+16:04 <t0m>     $self->copy_share_file(
 16:04 <t0m>         'favicon.ico',
 16:04 <t0m>         File::Spec->catfile( $self->{root}, "favicon.ico" )
 16:04 <t0m>     );
-#########################################################################
 16:05 <t0m> more like it
 16:05 <t0m> so we have sub mk_foo { shift->generate_foo(@_); }
 
 ====
 5-28
-03:04 < dhoss> SO. official next step: 1) #done trim crap out 2) #done write test for how 
+03:04 < dhoss> SO. official next step: 1) trim crap out 2) write test for how 
                helpers are invoking Catalyst::Helper 3)??? 4) profit!
-03:05 < t0m> 3)#done Re arrange files in sharedir so we can make the comversion guts 
+03:05 < t0m> 3) Re arrange files in sharedir so we can make the comversion guts 
              totally generic
 03:05 < t0m> 4) merge&profit
 03:05 < t0m> *conversion
@@ -118,59 +115,5 @@
                the one in topic
 03:06 < t0m> cause then the entire generate application becomes 'copy this 
              directory from X => Y, applying some file mangling rules)
-             
-=============================================================================
-04:26 < t0m> dhoss: erm, yeah - so the two things to do is: unit tests for the 
-             methods like get_file which we're not actually using any more..
-04:27 < t0m> (do that by making t/lib/ExampleHelper.pm - copy the TT one from 
-             CPAN or something, and then write some tests that get_file can 
-             successfully pull chunks out the __DATA__ segment
-04:28 < t0m> and rename everything in the sharedir to be named as-per where it 
-             ends up in your app, but suffixed by .tt or .bin
-04:29 < t0m> e.g. share/Makefile.PL.tt share/root/favicon.ico.bin 
-             share/lib/MyApp.pm.tt
-04:30 < t0m> the exact reasons for this nameing scheme become aparent post 
-             first merge, when we remove most of the code :)
-04:30 < t0m> but all of share/ needs to be in it's final resting place pre-merge
-04:31 < marcus> http://lumberjaph.net/blog/index.php/2009/05/30/catalystxdispatcherasgraph/ # <3 lazyweb
-04:31 < t0m> so tests the stuff we're no longer using in Helper.pm (e.g. 
-             get_file) still works. Rename share/ bits
-04:31 < t0m> marcus: Indeed :)
-04:31 < t0m> ^^ those two, then first merge.
-23:36 <@kd> dhoss: just found a bug in ::Devel ...
-23:36 <@kd> we're using #!/usr/bin/env perl now
-23:36 <@kd> that means we have to add the use warnings; pragma beneath it
-23:37 <@kd> that doesn't appear to be happeining in the scripts
-23:37 <@kd> please fix
-23:38 <@kd> dhoss: i.e. http://gist.github.com/122081
-==============================================================================
-
-# DONE
-1. Rename everything into final layout:
-  . tt files all named .tt
-  . none tt files all named .bin
-  . directory structure as generated, e.g. share/lib/MyApp.pm.tt, share/root/favicon.ico.bin
-
-2. get new layout working
-
-
-# DONE
-3. get tests for back compat - i.e. the methods no longer used in Helper.pm like 'get_file'
-  . copy Catalyst::Helper::View::TT into t/lib/TestBackCompat.pm
-  . write test t/deprecated_methods_backcompat.t which says:
-     use FindBin qw/$Bin/;
-     use lib "$Bin/lib";
-     use Test::More tests => 1;
-
-     my $helper = TestBackCompat->new( %maybe_some_params_here );
-     my $a_section = $helper->get_file('FileName');
-     is $a_section, 'FILECONTENTSFROM__DATA__';
-
-3. RFC - DONE
-
-Looking ahead
-
-MooseX::Getopt
-
 
 

@@ -15,9 +15,6 @@ use Catalyst::Utils;
 use Catalyst::Exception;
 use Path::Class qw/dir file/;
 use File::ShareDir qw/dist_dir/;
-use Moose;
-use aliased 'Path::Class::Dir';
-
 
 my %cache;
 
@@ -35,15 +32,8 @@ Catalyst::Helper - Bootstrap a Catalyst application
 
 sub get_sharedir_file {
     my ($self, @filename) = @_;
-    my $dist_dir;
-    if (-d "inc/.author") { # Can't use sharedir if we're in a checkout
-                            # this feels horrible, better ideas?
-        $dist_dir = 'share';
-    }
-    else {
-        $dist_dir = dist_dir('Catalyst-Devel');
-    }
-    my $file = file( $dist_dir, @filename);
+    my $file = file( dist_dir('Catalyst-Devel'), @filename);
+    warn $file;
     my $contents = $file->slurp;
     return $contents;
 }
@@ -226,7 +216,7 @@ sub mk_dir {
 
 sub mk_file {
     my ( $self, $file, $content ) = @_;
-    if ( -e $file && -s _ ) {
+    if ( -e $file ) {
         print qq/ exists "$file"\n/;
         return 0
           unless ( $self->{'.newfiles'}
@@ -271,30 +261,17 @@ sub next_test {
 }
 
 # Do not touch this method, *EVER*, it is needed for back compat.
-## addendum: we had to split this method so we could have backwards
-## compatability.  otherwise, we'd have no way to pass stuff from __DATA__ 
 
 sub render_file {
     my ( $self, $file, $path, $vars ) = @_;
-    my $template = $self->get_file( ( caller(0) )[0], $file );
-    $self->render_file_contents($template, $path, $vars);
-}
-
-sub render_sharedir_file {
-    my ( $self, $file, $path, $vars ) = @_;
-    my $template = $self->get_sharedir_file( $file );
-    $self->render_file_contents($template, $path, $vars);
-}
-
-sub render_file_contents {
-    my ( $self, $template, $path, $vars ) = @_;
     $vars ||= {};
     my $t = Template->new;
+    my $template = $self->get_sharedir_file( 'root', $file );
     return 0 unless $template;
     my $output;
     $t->process( \$template, { %{$self}, %$vars }, \$output )
       || Catalyst::Exception->throw(
-        message => qq/Couldn't process "$template", / . $t->error() );
+        message => qq/Couldn't process "$file", / . $t->error() );
     $self->mk_file( $path, $output );
 }
 
@@ -361,7 +338,7 @@ sub _mk_makefile {
     $self->{path} = File::Spec->catfile( 'lib', split( '::', $self->{name} ) );
     $self->{path} .= '.pm';
     my $dir = $self->{dir};
-    $self->render_file( 'makefile.tt', "$dir\/Makefile.PL" );
+    $self->render_file( 'Makefile.PL.tt', "$dir\/Makefile.PL" );
 
     if ( $self->{makefile} ) {
 
@@ -494,42 +471,6 @@ sub _deprecate_file {
             message => qq/Couldn't create "$file", "$!"/ );
     }
 }
-
-
-## this is so you don't have to do make install after every change to test
-sub _find_share_dir {
-  my ($self, $args) = @_;
-  my $share_name = $self->name;
-  if ($share_name =~ s!^/(.*?)/!!) {
-    my $dist = $1;
-    $args->{share_base_dir} = eval {
-        Dir->new(File::ShareDir::dist_dir($dist))
-           ->subdir('share');
-    };
-    if ($@) {
-        # not installed
-        my $file = __FILE__;
-        my $dir = Dir->new(dirname($file));
-        my $share_base;
-        while ($dir->parent) {
-            if (-d $dir->subdir('share') && -d $dir->subdir('share')->subdir('root')) {
-                $share_base = $dir->subdir('share')->subdir('root');
-                last;
-            }
-            $dir = $dir->parent;
-        }
-        confess "could not find sharebase by recursion. ended up at $dir, from $file"
-          unless $share_base;
-        $args->{share_base_dir} = $share_base; 
-    }
-  }
-  my $base = $args->{share_base_dir}->subdir($share_name);
-  confess "No such share base directory ${base}"
-    unless -d $base;
-  $self->share_dir($base);
-};
-
-
 
 =head1 DESCRIPTION
 
